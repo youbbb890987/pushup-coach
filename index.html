@@ -445,7 +445,11 @@ self.onmessage = async (e) => {
   if (m.type === "init") {
     try {
       self.exports = {}; self.module = { exports: self.exports };
-      importScripts(m.a.bundle);
+      try { importScripts(m.a.bundle); }
+      catch (err) {   // some CDNs serve .cjs with a non-JavaScript type: load the text and run it from a blob
+        const code = await (await fetch(m.a.bundle)).text();
+        importScripts(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
+      }
       const PL = self.module.exports.PoseLandmarker || self.exports.PoseLandmarker;
       let buf;
       const res = await fetch(m.a.model);
