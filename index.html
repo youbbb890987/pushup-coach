@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body><title>AI Form Coach</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Cairo:wght@500;600&display=swap">
 <style>
 /* Layout: one column like a gym scoreboard — stage on top, counters under it, coaching below. Single dark look (camera app). */
 :root {
@@ -53,6 +53,7 @@ button:focus-visible, .filebtn:focus-within { outline: 2px solid var(--accent); 
 .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
 .tips { margin: 0; padding-left: 18px; }
+.ar { font-family: "Cairo", var(--body); font-size: 16px; line-height: 1.7; padding-left: 0; padding-right: 20px; }
 .strip { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { min-width: 36px; height: 32px; border-radius: 8px; font: 600 14px var(--body); display: inline-grid; place-items: center; padding: 0 8px;
   border: 1px solid transparent; cursor: pointer; }
@@ -62,7 +63,8 @@ button:focus-visible, .filebtn:focus-within { outline: 2px solid var(--accent); 
 .muted { color: var(--muted); font-size: 13px; }
 .summary { border: 1px solid var(--accent); }
 .sumhead { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: .3px; }
-.summary ol { margin: 0; padding-left: 20px; }
+.summary ol { margin: 0; }
+.summary ol:not(.ar) { padding-left: 20px; }
 .exswitch { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
 .exswitch button { min-height: 40px; padding: 8px 18px; border: 0; background: transparent; color: var(--muted); font: 700 15px var(--display); letter-spacing: .8px; text-transform: uppercase; }
 .exswitch button[aria-pressed="true"] { background: var(--accent); color: #1a1205; }
@@ -119,7 +121,7 @@ footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line)
     <div class="verdict" id="lastVerdict">Waiting for the first rep</div>
     <div class="bar" aria-hidden="true"><i id="confBar"></i></div>
     <div class="muted" id="lastConf">The model judges every full repetition: down and back up.</div>
-    <ul class="tips" id="lastTips"></ul>
+    <ul class="tips ar" id="lastTips" dir="rtl"></ul>
   </div>
 
   <div class="card" id="stripCard" hidden>
@@ -131,7 +133,7 @@ footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line)
   <div class="card summary" id="summary" hidden>
     <h2>Session summary</h2>
     <div id="sumHead" class="sumhead"></div>
-    <div id="sumTipsWrap"><div class="muted">Most frequent advice</div><ol id="sumTips"></ol></div>
+    <div id="sumTipsWrap"><div class="muted">Most frequent advice</div><ul id="sumTips" class="tips ar" dir="rtl"></ul></div>
   </div>
 
   <div class="card">
@@ -551,6 +553,33 @@ self.onmessage = async (e) => {
 
 const $ = id => document.getElementById(id);
 const E = window.PushupEngine;
+const AR = {
+  "Hips are sagging - tighten your core": "وسطك نازل لتحت - شد عضلات بطنك",
+  "Hips too high - lower them into one straight line": "وسطك عالي - نزّله لحد ما جسمك يبقى خط مستقيم",
+  "Keep your body straight (shoulders, hips, ankles in one line)": "خلّي جسمك مستقيم: الكتف والوسط والكعب على خط واحد",
+  "Go lower - bend your elbows more": "انزل أكتر - اثني كوعك أكتر",
+  "Use the full range of motion": "كمّل الحركة للآخر - انزل كويس واطلع لفوق خالص",
+  "Straighten your arms fully at the top": "افرد دراعك خالص وإنت فوق",
+  "Bring your chest closer to the floor": "قرّب صدرك من الأرض",
+  "Hands too far forward - put them under your shoulders": "إيدك قدام زيادة - حطها تحت كتفك",
+  "Hands too far back - put them under your shoulders": "إيدك ورا زيادة - حطها تحت كتفك",
+  "Elbow path off - keep elbows about 45 deg from your body": "خلّي كوعك بزاوية حوالي 45 درجة من جسمك",
+  "Keep your legs straight": "خلّي رجلك مفرودة",
+  "Go deeper - bend your knees more": "انزل أكتر - اثني ركبتك أكتر",
+  "Go lower - hips down towards knee height": "نزّل وسطك لحد مستوى ركبتك تقريبًا",
+  "Use the full range - squat down and stand up fully": "كمّل الحركة - انزل كويس واقف لفوق خالص",
+  "Stand up fully at the top": "اقف مفرود خالص في آخر العدّة",
+  "Keep your chest up - less forward lean": "ارفع صدرك - متميلش لقدام كتير",
+  "Push your hips back as you go down": "رجّع وسطك لورا وإنت نازل",
+  "Knees too far forward - sit back into your hips": "ركبتك رايحة لقدام زيادة - اقعد بوسطك لورا",
+  "Keep your heels on the floor": "خلّي كعبك على الأرض",
+  "No single clear cause - movement differs from good reps": "مفيش سبب واحد واضح - الحركة مختلفة عن العدّات الصح",
+  "Good rep - keep this form": "عدّة ممتازة - كمّل كده",
+  "All reps looked good. Keep it up.": "كل العدّات كانت كويسة - كمّل كده",
+};
+const ar = s => AR[s] || s;            // coaching tips are shown in Arabic
+function tipItem(text) { const li = document.createElement("li"); li.textContent = text; li.dir = "rtl"; li.lang = "ar"; return li; }
+
 const MODELS = { push_up: window.PUSHUP_MODEL, squat: window.SQUAT_MODEL };
 const EX_TEXT = {
   push_up: { name: "push-up", record: "Record push-ups", tip3: "Start in the plank with straight arms, then do full reps.",
@@ -658,7 +687,7 @@ function showRep(r) {
   $("lastConf").textContent = `Model confidence ${Math.round(conf * 100)}% (${confWord(conf)}) · ${r.duration.toFixed(1)} s`;
   $("lastTips").innerHTML = "";
   const tips = r.correct ? ["Good rep - keep this form"] : r.issues;
-  for (const t of tips) { const li = document.createElement("li"); li.textContent = t; $("lastTips").appendChild(li); }
+  for (const t of tips) $("lastTips").appendChild(tipItem(ar(t)));
   document.querySelectorAll(".chip").forEach(c => c.classList.toggle("sel", +c.dataset.rep === r.rep));
 }
 function onRep(r) {
@@ -679,8 +708,8 @@ function showSummary() {
   for (const r of results) if (!r.correct) for (const t of r.issues) count[t] = (count[t] || 0) + 1;
   const top = Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 3);
   $("sumTips").innerHTML = "";
-  if (!top.length) { const li = document.createElement("li"); li.textContent = "All reps looked good. Keep it up."; $("sumTips").appendChild(li); }
-  for (const [t, n] of top) { const li = document.createElement("li"); li.textContent = `${t} (${n} rep${n > 1 ? "s" : ""})`; $("sumTips").appendChild(li); }
+  if (!top.length) $("sumTips").appendChild(tipItem(ar("All reps looked good. Keep it up.")));
+  for (const [t, n] of top) $("sumTips").appendChild(tipItem(`${ar(t)} (${n} ${n > 1 ? "عدّات" : "عدّة"})`));
   $("summary").hidden = false;
 }
 
@@ -740,12 +769,13 @@ function loop() {
   if (!running) return;
   if (video.readyState >= 2) {
     const now = performance.now();
-    if (video.currentTime !== lastVT && now - lastSent >= DETECT_EVERY_MS) {
+    // live: ~15 detections a second; video file: every frame (like the desktop app), the video slows down if needed
+    if (video.currentTime !== lastVT && now - lastSent >= (mode === "live" ? DETECT_EVERY_MS : 0)) {
       const t = mode === "live" ? (now - tLive0) / 1000 : video.currentTime;
       if (sendFrame(t)) lastVT = video.currentTime;
     }
     if (mode === "video") {          // slow the video down if the phone cannot keep up with 15 detections per second of video
-      const rate = Math.min(1, Math.max(0.25, DETECT_EVERY_MS / Math.max(latency, 1)));
+      const rate = Math.min(1, Math.max(0.2, (1000 / 30) / Math.max(latency, 1)));
       if (Math.abs(video.playbackRate - rate) > 0.05) video.playbackRate = rate;
     }
     draw();
